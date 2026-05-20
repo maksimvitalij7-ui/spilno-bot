@@ -296,9 +296,9 @@ async def handle_report_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
 
-    # Принимаем отчёт после 15:00
+    # Проверяем ожидаем ли отчёт (упрощённо — принимаем всегда после 15:00)
     now = datetime.now(tz)
-    if now.hour >= 14:
+    if now.hour >= 15:
         db.save_report(user_id, text)
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("✅ Верно", callback_data="report_ok")],
@@ -491,27 +491,26 @@ async def my_salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["salary_step"] = "date"
     context.user_data["full_name"] = update.effective_user.full_name
     salary = db.get_salary_info(user_id)
-
     if salary:
-        current = (
-            "📋 *Текущие данные:*\n"
-            "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "📅 Дата: " + str(salary.get("salary_date", "—")) + "\n"
-            "💵 Ставка: " + str(salary.get("salary_amount", "—")) + "\n"
-            "🎁 Бонусы: " + str(salary.get("bonus_info", "—")) + "\n"
+        await update.message.reply_text(
+            "✏️ *Обновление данных о зарплате*\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"📅 Текущая дата: {salary.get('salary_date', '—')}\n"
+            f"💵 Текущая ставка: {salary.get('salary_amount', '—')}\n"
+            f"🎁 Текущие бонусы: {salary.get('bonus_info', '—')}\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "📅 *Шаг 1 из 3 — Дата зарплаты*\n"
+            "Напиши новую дату выплаты зарплаты:\n"
+            "_Например: 5 и 20 каждого месяца_",
+            parse_mode="Markdown"
         )
     else:
-        current = ""
-
-    await update.message.reply_text(
-        "✏️ *Обновление данных о зарплате*\n\n" +
-        current +
-        "📅 *Шаг 1 из 3 — Дата зарплаты*\n"
-        "Напиши дату выплаты зарплаты:\n"
-        "_Например: 5 и 20 каждого месяца_",
-        parse_mode="Markdown"
-    )
+        await update.message.reply_text(
+            "📅 *Шаг 1 из 3 — Дата зарплаты*\n"
+            "Напиши дату выплаты зарплаты:\n"
+            "_Например: 5 и 20 каждого месяца_",
+            parse_mode="Markdown"
+        )
 
 async def salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in db.get_admin_ids():
@@ -530,87 +529,6 @@ async def salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += f"🎁 Бонусы: {emp['bonus_info'] or '—'}\n"
         text += "─────────────────────\n"
     await update.message.reply_text(text[:4000], parse_mode="Markdown")
-
-async def notify_salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in db.get_admin_ids():
-        await update.message.reply_text("⛔ Доступ запрещён.")
-        return
-    employees = db.get_all_employees()
-    admin_ids = db.get_admin_ids()
-    count = 0
-    for emp in employees:
-        if emp["telegram_id"] in admin_ids:
-            continue
-        salary = db.get_salary_info(emp["telegram_id"])
-        if salary:
-            continue  # уже заполнил
-        try:
-            await context.bot.send_message(
-                chat_id=emp["telegram_id"],
-                text=(
-                    "📋 *Уважаемый сотрудник!*\n\n"
-                    "Просьба заполнить зарплатную ведомость прямо сейчас.\n\n"
-                    "Это займёт всего 1 минуту 👇\n\n"
-                    "Напиши команду /mysalary и заполни 3 шага:\n"
-                    "📅 Дата зарплаты\n"
-                    "💵 Ставка\n"
-                    "🎁 Бонусы\n\n"
-                    "🏢 *SPILNO Design Group*"
-                ),
-                parse_mode="Markdown"
-            )
-            count += 1
-        except Exception as e:
-            logger.error(f"Ошибка отправки уведомления {emp['name']}: {e}")
-    await update.message.reply_text(
-        f"✅ Сообщение отправлено {count} сотрудникам у которых не заполнена ведомость!"
-    )
-
-async def commands_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id not in db.get_admin_ids():
-        await update.message.reply_text("⛔ Доступ запрещён.")
-        return
-    text = (
-        "📖 *Все команды SPILNO Design Group*\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "🔑 *Панель управления:*\n"
-        "/admin — панель с кнопками\n"
-        "/today — сводка за сегодня\n"
-        "/salary — зарплаты сотрудников\n"
-        "/export — скачать Excel за 30 дней\n"
-        "/commands — этот список команд\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "📊 *В панели /admin доступно:*\n"
-        "📊 Сводка — кто на работе сегодня\n"
-        "📍 Геолокации — расстояние до офиса\n"
-        "📝 Отчёты — что сделал каждый\n"
-        "💰 Зарплаты — ставки и бонусы\n"
-        "⬇️ Экспорт Excel — отчёт за 30 дней\n"
-        "👥 Сотрудники — список всех\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "👤 *Команды сотрудников:*\n"
-        "/start — регистрация\n"
-        "/checkin — отметиться вручную\n"
-        "/report — сдать отчёт вручную\n"
-        "/mystatus — мой статус сегодня\n"
-        "/mysalary — обновить данные о зарплате\n"
-        "/help — список команд\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "⏰ *Автоматические уведомления:*\n"
-        "🌅 09:00 — отметка о приходе\n"
-        "⏰ 10:30 — напоминание не ответившим\n"
-        "🌆 18:00 — вечерний отчёт\n"
-        "💰 10:00 — напоминание о зарплате (за 3 дня)\n"
-        "💳 19:00 — подтверждение получения зарплаты\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🏢 *SPILNO Design Group*"
-    )
-    msg = await update.message.reply_text(text, parse_mode="Markdown")
-    await context.bot.pin_chat_message(
-        chat_id=update.effective_chat.id,
-        message_id=msg.message_id,
-        disable_notification=True
-    )
 
 async def today_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in db.get_admin_ids():
@@ -826,8 +744,6 @@ def main():
     app.add_handler(CommandHandler("today", today_cmd))
     app.add_handler(CommandHandler("export", export_cmd))
     app.add_handler(CommandHandler("salary", salary_cmd))
-    app.add_handler(CommandHandler("commands", commands_cmd))
-    app.add_handler(CommandHandler("notify", notify_salary_cmd))
     app.add_handler(CommandHandler("mysalary", my_salary_cmd))
 
     # Обработчики кнопок
