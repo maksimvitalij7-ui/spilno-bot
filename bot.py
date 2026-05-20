@@ -531,6 +531,52 @@ async def salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += "─────────────────────\n"
     await update.message.reply_text(text[:4000], parse_mode="Markdown")
 
+async def commands_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in db.get_admin_ids():
+        await update.message.reply_text("⛔ Доступ запрещён.")
+        return
+    text = (
+        "📖 *Все команды SPILNO Design Group*\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "🔑 *Панель управления:*\n"
+        "/admin — панель с кнопками\n"
+        "/today — сводка за сегодня\n"
+        "/salary — зарплаты сотрудников\n"
+        "/export — скачать Excel за 30 дней\n"
+        "/commands — этот список команд\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "📊 *В панели /admin доступно:*\n"
+        "📊 Сводка — кто на работе сегодня\n"
+        "📍 Геолокации — расстояние до офиса\n"
+        "📝 Отчёты — что сделал каждый\n"
+        "💰 Зарплаты — ставки и бонусы\n"
+        "⬇️ Экспорт Excel — отчёт за 30 дней\n"
+        "👥 Сотрудники — список всех\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "👤 *Команды сотрудников:*\n"
+        "/start — регистрация\n"
+        "/checkin — отметиться вручную\n"
+        "/report — сдать отчёт вручную\n"
+        "/mystatus — мой статус сегодня\n"
+        "/mysalary — обновить данные о зарплате\n"
+        "/help — список команд\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "⏰ *Автоматические уведомления:*\n"
+        "🌅 09:00 — отметка о приходе\n"
+        "⏰ 10:30 — напоминание не ответившим\n"
+        "🌆 18:00 — вечерний отчёт\n"
+        "💰 10:00 — напоминание о зарплате (за 3 дня)\n"
+        "💳 19:00 — подтверждение получения зарплаты\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━\n"
+        "🏢 *SPILNO Design Group*"
+    )
+    msg = await update.message.reply_text(text, parse_mode="Markdown")
+    await context.bot.pin_chat_message(
+        chat_id=update.effective_chat.id,
+        message_id=msg.message_id,
+        disable_notification=True
+    )
+
 async def today_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in db.get_admin_ids():
         await update.message.reply_text("⛔ Доступ запрещён.")
@@ -745,6 +791,7 @@ def main():
     app.add_handler(CommandHandler("today", today_cmd))
     app.add_handler(CommandHandler("export", export_cmd))
     app.add_handler(CommandHandler("salary", salary_cmd))
+    app.add_handler(CommandHandler("commands", commands_cmd))
     app.add_handler(CommandHandler("mysalary", my_salary_cmd))
 
     # Обработчики кнопок
