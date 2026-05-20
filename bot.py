@@ -491,26 +491,27 @@ async def my_salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["salary_step"] = "date"
     context.user_data["full_name"] = update.effective_user.full_name
     salary = db.get_salary_info(user_id)
+
     if salary:
-        await update.message.reply_text(
-            "✏️ *Обновление данных о зарплате*\n"
-            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"📅 Текущая дата: {salary.get('salary_date', '—')}\n"
-            f"💵 Текущая ставка: {salary.get('salary_amount', '—')}\n"
-            f"🎁 Текущие бонусы: {salary.get('bonus_info', '—')}\n\n"
+        current = (
+            "📋 *Текущие данные:*\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "📅 *Шаг 1 из 3 — Дата зарплаты*\n"
-            "Напиши новую дату выплаты зарплаты:\n"
-            "_Например: 5 и 20 каждого месяца_",
-            parse_mode="Markdown"
+            "📅 Дата: " + str(salary.get("salary_date", "—")) + "\n"
+            "💵 Ставка: " + str(salary.get("salary_amount", "—")) + "\n"
+            "🎁 Бонусы: " + str(salary.get("bonus_info", "—")) + "\n"
+            "━━━━━━━━━━━━━━━━━━━━━━\n\n"
         )
     else:
-        await update.message.reply_text(
-            "📅 *Шаг 1 из 3 — Дата зарплаты*\n"
-            "Напиши дату выплаты зарплаты:\n"
-            "_Например: 5 и 20 каждого месяца_",
-            parse_mode="Markdown"
-        )
+        current = ""
+
+    await update.message.reply_text(
+        "✏️ *Обновление данных о зарплате*\n\n" +
+        current +
+        "📅 *Шаг 1 из 3 — Дата зарплаты*\n"
+        "Напиши дату выплаты зарплаты:\n"
+        "_Например: 5 и 20 каждого месяца_",
+        parse_mode="Markdown"
+    )
 
 async def salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in db.get_admin_ids():
