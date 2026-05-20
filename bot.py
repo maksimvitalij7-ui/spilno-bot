@@ -296,9 +296,9 @@ async def handle_report_text(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
 
-    # Проверяем ожидаем ли отчёт (упрощённо — принимаем всегда после 15:00)
+    # Принимаем отчёт после 15:00
     now = datetime.now(tz)
-    if now.hour >= 15:
+    if now.hour >= 14:
         db.save_report(user_id, text)
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("✅ Верно", callback_data="report_ok")],
