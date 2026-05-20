@@ -531,6 +531,41 @@ async def salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text += "─────────────────────\n"
     await update.message.reply_text(text[:4000], parse_mode="Markdown")
 
+async def notify_salary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in db.get_admin_ids():
+        await update.message.reply_text("⛔ Доступ запрещён.")
+        return
+    employees = db.get_all_employees()
+    admin_ids = db.get_admin_ids()
+    count = 0
+    for emp in employees:
+        if emp["telegram_id"] in admin_ids:
+            continue
+        salary = db.get_salary_info(emp["telegram_id"])
+        if salary:
+            continue  # уже заполнил
+        try:
+            await context.bot.send_message(
+                chat_id=emp["telegram_id"],
+                text=(
+                    "📋 *Уважаемый сотрудник!*\n\n"
+                    "Просьба заполнить зарплатную ведомость прямо сейчас.\n\n"
+                    "Это займёт всего 1 минуту 👇\n\n"
+                    "Напиши команду /mysalary и заполни 3 шага:\n"
+                    "📅 Дата зарплаты\n"
+                    "💵 Ставка\n"
+                    "🎁 Бонусы\n\n"
+                    "🏢 *SPILNO Design Group*"
+                ),
+                parse_mode="Markdown"
+            )
+            count += 1
+        except Exception as e:
+            logger.error(f"Ошибка отправки уведомления {emp['name']}: {e}")
+    await update.message.reply_text(
+        f"✅ Сообщение отправлено {count} сотрудникам у которых не заполнена ведомость!"
+    )
+
 async def commands_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in db.get_admin_ids():
         await update.message.reply_text("⛔ Доступ запрещён.")
@@ -792,6 +827,7 @@ def main():
     app.add_handler(CommandHandler("export", export_cmd))
     app.add_handler(CommandHandler("salary", salary_cmd))
     app.add_handler(CommandHandler("commands", commands_cmd))
+    app.add_handler(CommandHandler("notify", notify_salary_cmd))
     app.add_handler(CommandHandler("mysalary", my_salary_cmd))
 
     # Обработчики кнопок
